@@ -1,6 +1,6 @@
 /*
 Animation consists of white dots travelling up at varying
-speeds and accelerations
+speeds and accelerations.
 
 When we draw the dots, we draw B color over the previous
 coordinates, and A color over the new coordinate,
