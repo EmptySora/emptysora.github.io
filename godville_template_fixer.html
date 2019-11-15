@@ -1,0 +1,128 @@
+﻿<html>
+  <head>
+    <title>gv template fixer</title>
+    <meta charset="UTF-8"/>
+    <style>
+    </style>
+    <script>
+      var templates = {
+        "quest":{"required":["image","caption","type","number","status","description"],"optional":[],"move":[]},
+        "equipment":{"required":["image","caption","worn","durability","description"],"optional":[],"move":[["type","worn"]]},
+        "aura":{"required":["image","caption","effect","colour"],"optional":[],"move":[]},
+        "tavern":{"required":["image","caption","feature","drink"],"optional":[],"move":[]},
+        "geography":{"required":["image","caption","description"],"optional":[],"move":[]},
+        "monster":{"required":["image","caption","latin","description","class","habitat"],"optional":["strong","boss","boss-type","pet-levels","pet-features","sea","sea-names"],"move":[]},
+        "town":{"required":["image","caption","milestone","code","features","motto"],"optional":[],"move":[["abbreviation","code"]]},
+        "skill":{"required":["image","caption","type","description"],"optional":[],"move":[]},
+        "artifact":{"required":["image","caption","type","description"],"optional":["value","monster","cost","effect"],"move":[]}
+      };
+      var tlist = Object.keys(templates);
+      Object.defineProperty(Array.prototype, "remove", {
+        "get": function arrRemoveget() {
+          return (function arrRemove(item) {
+            var index = this.indexOf(item);
+            while (index !== -1) {
+              this.splice(index, 1);
+              index = this.indexOf(item);
+            }
+          }).bind(this);
+        }
+      });
+      function parseTemplate(text) {
+        var lines = text.split(/[\r\n]+/g).map(function mapping(text) {
+          return text.trim();
+        }).filter(function mappingb(text) {
+          return (text.length > 0) && (text.toLowerCase().indexOf("{{stub") === -1);
+        });
+        var templ = lines.shift().toLowerCase();
+        var parameters = {};
+        var parameter_list = [];
+        var template = null;
+        if (templ.startsWith("{{")) {
+          templ = templ.substring(2);
+        }
+        if (!tlist.includes(templ)) {
+          return text;
+        }
+        template = templates[templ];
+        lines.pop(); //remove last item which should just be "}}"
+        lines.map(function mappingc(text) {
+          return text.substring(1).trim().split("=").map(function mappingd(text) {
+            return text.trim();
+          });
+        }).forEach(function foreacha(pair) {
+          parameters[pair[0].toLowerCase()] = pair[1];
+          if (!parameter_list.includes(pair[0].toLowerCase())) {
+            parameter_list.push(pair[0].toLowerCase());
+          }
+        });
+        lines = [];
+        template.required.forEach(function foreachb(parameter) {
+          if (parameters[parameter] === undefined) {
+            parameters[parameter] = "";
+          }
+        });
+        template.required.forEach(function foreachc(parameter) {
+          lines.push([parameter,parameters[parameter]]);
+          parameter_list.remove(parameter);
+        });
+        template.move.forEach(function foreachc(parameter) {
+          if (parameter_list.includes(parameter[0])) {
+            if (lines.some(function anya(line) {
+              return line[0] === parameter[1];
+            })) {
+              lines.remove(lines.filter(function filtera(line) {
+                return line[0] === parameter[1];
+              })[0]);
+            }
+            lines.push([parameter[1],parameters[parameter[0]]]);
+            parameter_list.remove(parameter[0]);
+            parameter_list.remove(parameter[1]);
+          }
+        });
+        //move causes worn to move to end, should not be that way... don't care to fix
+        template.optional.forEach(function foreachc(parameter) {
+          if (parameter_list.includes(parameter)) {
+            lines.push([parameter,parameters[parameter]]);
+            parameter_list.remove(parameter);
+          }
+        });
+        parameter_list.sort();
+        parameter_list.forEach(function foreachd(parameter) {
+          lines.push([parameter,parameters[parameter]]);
+        });
+        var spacing_length = Math.max.apply(null,lines.map(function mappingd(line) {
+          return line[0].length;
+        }));
+        lines = lines.map(function mappinge(line) {
+          while (line[0].length < spacing_length) {
+            line[0] += " ";
+          }
+          return line;
+        });
+        lines = lines.map(function mappingf(line) {
+          return `| ${line[0]} = ${line[1]}`;
+        });
+        lines.unshift(`{{${templ}`);
+        lines.unshift(`{{stub|${templ}}}`);
+        lines.push("}}");
+        return lines.join("\n");
+      }
+      function copyText() {
+        var e = document.querySelector("#output");
+        e.select();
+        document.execCommand("copy");
+      }
+      function doFix() {
+        document.querySelector("#output").value 
+          = parseTemplate(document.querySelector("#input").value);
+        copyText();
+      }
+    </script>
+  </head>
+  <body>
+    <textarea id="input" placeholder="input"></textarea><br/>
+    <textarea id="output" placeholder="output" style="position:fixed;left:-200%;top:-200%;"></textarea><br/>
+    <input type="button" value="Fix" onClick="doFix()"/>
+  </body>
+</html>
