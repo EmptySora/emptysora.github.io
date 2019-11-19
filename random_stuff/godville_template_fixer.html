@@ -12,7 +12,7 @@
         "tavern":{"required":["image","caption","feature","drink"],"optional":[],"move":[]},
         "geography":{"required":["image","caption","description"],"optional":[],"move":[]},
         "monster":{"required":["image","caption","latin","description","class","habitat"],"optional":["strong","boss","boss-type","pet-levels","pet-features","sea","sea-names"],"move":[]},
-        "town":{"required":["image","caption","milestone","code","features","motto"],"optional":[],"move":[["abbreviation","code"]]},
+        "town":{"required":["image","caption","milestone","code","features","motto"],"optional":[],"move":[["abbreviation","code"],["known","features"],["description","features"]]},
         "skill":{"required":["image","caption","type","description"],"optional":[],"move":[]},
         "artifact":{"required":["image","caption","type","description"],"optional":["value","monster","cost","effect"],"move":[]}
       };
@@ -28,7 +28,7 @@
           }).bind(this);
         }
       });
-      function parseTemplate(text) {
+      function parseTemplate(text,repeat) {
         var lines = text.split(/[\r\n]+/g).map(function mapping(text) {
           return text.trim();
         }).filter(function mappingb(text) {
@@ -106,7 +106,11 @@
         lines.unshift(`{{${templ}`);
         lines.unshift(`{{stub|${templ}}}`);
         lines.push("}}");
-        return lines.join("\n");
+        if (!repeat) {
+          return parseTemplate(lines.join("\n"),true);
+        } else {
+          return lines.join("\n");
+        }
       }
       function copyText() {
         var e = document.querySelector("#output");
