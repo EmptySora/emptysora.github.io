@@ -6,3 +6,5 @@
 *.js~
 *.js~
 streamers/main.js~
+winaudiolevels/**
+!winaudiolevels/**/
