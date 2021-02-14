@@ -6,4 +6,11 @@
 *.js~
 *.js~
 streamers/main.js~
-winaudiolevels/**
+
+#Was wondering why the following wasn't working.
+#then I realized I NEEDED TO ADD THE "STREAMERS"
+#SUBDIRECTORY.
+#My words:
+#"Am I an idiot?"
+#"AUUUUUGHHHHHHHHH!!!!"
+streamers/winaudiolevels/**
