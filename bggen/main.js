@@ -1,10 +1,9 @@
 "use strict";
+/* eslint-disable no-underscore-dangle */
 
 function $(x) {
-    return document.querySelector(`#${x}`);
+    return document.getElementById(x);
 }
-let int = null;
-let cargs = null;
 /*
  * Usage:
  * get=get value
@@ -34,20 +33,6 @@ const params = new Proxy({}, {
          */
     }
 });
-
-function stopDrawing() {
-    window.clearInterval(int);
-    params.width = true;
-    params.height = true;
-    params["opacity-a"] = true;
-    params["opacity-b"] = true;
-    params["radius-a"] = true;
-    params["radius-b"] = true;
-    params.wrap = true;
-    params.gradient = true;
-    params.start = true;
-    params.stop = false;
-}
 
 class Gradient {
     constructor(xgrad) {
@@ -129,287 +114,319 @@ class Gradient {
     }
 }
 
-function getArgs() {
-    const ret = {
-        width: parseInt(params.width),
-        height: parseInt(params.height),
-        gradient: new Gradient(params.gradient),
-        wrap: document.querySelector("#wrap").checked
-    };
-    let opa = params["opacity-a"];
-    let opb = params["opacity-b"];
-    let raa = params["radius-a"];
-    let rab = params["radius-b"];
-    if (opa.length > 0) {
-        opb = opb || opa;
+class MainClass {
+    static startDrawing() {
+        params.width = false;
+        params.height = false;
+        params["opacity-a"] = false;
+        params["opacity-b"] = false;
+        params["radius-a"] = false;
+        params["radius-b"] = false;
+        params.wrap = false;
+        params.gradient = false;
+        params.start = false;
+        params.stop = true;
+        MainClass.clearCircles();
+        MainClass.interval = window.setInterval(() => {
+            MainClass.drawCircles();
+        }, 1);
     }
-    if (opb.length > 0) {
-        opa = opa || opb;
-    }
-    if (raa.length > 0) {
-        rab = rab || raa;
-    }
-    if (rab.length > 0) {
-        raa = raa || rab;
-    }
-    opa = parseFloat(opa);
-    opb = parseFloat(opb);
-    raa = parseFloat(raa);
-    rab = parseFloat(rab);
-    ret.radius = {
-        min: Math.min(raa, rab),
-        max: Math.max(raa, rab)
-    };
-    ret.opacity = {
-        min: Math.min(opa, opb),
-        max: Math.max(opa, opb)
-    };
-    return ret;
-}
 
-function addOpacity(color, opacity) {
-    return color.replace("rgb(", "rgba(").replace(")", `,${opacity})`);
-}
-
-function randint(xmin, xmax) {
-    let min = xmin;
-    let max = xmax;
-    if (typeof min === "undefined") {
-        min = 0;
+    static stopDrawing() {
+        window.clearInterval(MainClass.interval);
+        params.width = true;
+        params.height = true;
+        params["opacity-a"] = true;
+        params["opacity-b"] = true;
+        params["radius-a"] = true;
+        params["radius-b"] = true;
+        params.wrap = true;
+        params.gradient = true;
+        params.start = true;
+        params.stop = false;
     }
-    if (typeof max === "undefined") {
-        max = 0xFFFFFFFF;
+
+    static clearCircles() {
+        const o = MainClass.output;
+        const ctx = o.getContext("2d");
+        ctx.fillStyle = "transparent";
+        ctx.clearRect(0, 0, o.width, o.height);
+        MainClass.currentArgs = MainClass.args;
+        ctx.fillStyle = "white";
+        o.setAttribute("width", MainClass.width);
+        o.setAttribute("height", MainClass.height);
+        MainClass.showGradient(MainClass.gradient);
     }
-    min = Math.floor(min);
-    max = Math.floor(max);
-    let rand = new Uint32Array(1);
-    window.crypto.getRandomValues(rand);
-    [rand] = rand;
-    rand %= max - min;
-    return rand + min;
-}
 
-function randfloat() {
-    const rand = new Uint32Array(1);
-    window.crypto.getRandomValues(rand);
-    return rand[0] / 0xFFFFFFFF;
-}
+    static showGradient(gradient) {
+        const gradp = params.grad;
+        const c = params.grad;
+        const ctx = gradp.getContext("2d");
+        gradient.ranges.forEach((r) => {
+            const g1 = ctx.createLinearGradient(
+                r[1][0] * c.width,
+                0,
+                r[1][1] * c.width,
+                0
+            );
+            const g2 = ctx.createLinearGradient(
+                r[1][1] * c.width,
+                0,
+                r[1][2] * c.width,
+                0
+            );
+            g1.addColorStop(0, r[0][0]);
+            g1.addColorStop(1, Gradient.colorMix(r[0][0], r[0][1], 0.5));
+            g2.addColorStop(0, Gradient.colorMix(r[0][0], r[0][1], 0.5));
+            g2.addColorStop(1, r[0][1]);
+            ctx.fillStyle = g1;
+            ctx.fillRect(r[1][0] * c.width, 0, r[1][1] * c.width, c.height);
+            ctx.fillStyle = g2;
+            ctx.fillRect(r[1][1] * c.width, 0, r[1][2] * c.width, c.height);
+        });
+        /*
+         * Note:
+         * x11=start*c.width
+         * x12=mid*c.width
+         * x21=mid*c.width
+         * x22-end*c.width
+         * y1=0
+         * y2=0
+         */
+    }
 
-function drawCircle() {
-    const o = params.output;
-    const ctx = o.getContext("2d");
-    //If wrapping, offset x and y by 0.5*radius.current (between min and max)
-    /* eslint-disable-next-line no-extra-parens */
-    const radius = (randfloat() * (cargs.radius.max - cargs.radius.min))
-        + cargs.radius.min;
-    let x = randint(0, o.width);
-    let y = randint(0, o.width);
-    /* eslint-disable-next-line no-extra-parens */
-    const opacity = (randfloat() * (cargs.opacity.max - cargs.opacity.min))
-        + cargs.opacity.min;
-    const color = addOpacity(cargs.gradient.getColor(randfloat()), opacity);
-    ctx.moveTo(x, y);
-    ctx.beginPath();
-    ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.closePath();
-    if (cargs.wrap) {
-        const ox = x;
-        const oy = y;
-        let inverseCircle = false;
-        if (x <= radius) {
-            inverseCircle = true;
-            x = o.width + x;
-        } else if (x >= o.width - radius) {
-            x -= o.width;
-            inverseCircle = true;
-        }
-        if (inverseCircle) {
-            ctx.moveTo(x, y);
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.closePath();
-        }
-        x = ox;
-        y = oy;
-        inverseCircle = false;
-        if (y <= radius) {
-            inverseCircle = true;
-            y = o.height + y;
-        } else if (y >= o.height - radius) {
-            y -= o.height;
-            inverseCircle = true;
-        }
-        if (inverseCircle) {
-            ctx.moveTo(x, y);
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.closePath();
-        }
-        x = ox;
-        y = oy;
-        inverseCircle = 0;
-        if (x <= radius) {
-            inverseCircle += 1;
-            x = o.width + x;
-        } else if (x >= o.width - radius) {
-            x -= o.width;
-            inverseCircle += 1;
-        }
-        if (y <= radius) {
-            inverseCircle += 1;
-            y = o.height + y;
-        } else if (y >= o.height - radius) {
-            y -= o.height;
-            inverseCircle += 1;
-        }
-        if (inverseCircle > 1) {
-            ctx.moveTo(x, y);
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.closePath();
+    static drawCircles() {
+        for (let i = 0; i < 25; i += 1) {
+            MainClass.drawCircle();
         }
     }
-}
 
-function drawCircles() {
-    for (let i = 0; i < 25; i += 1) {
-        drawCircle();
+    static addOpacity(color, opacity) {
+        return color.replace("rgb(", "rgba(").replace(")", `,${opacity})`);
     }
-}
 
-function showGradient(gradient) {
-    const gradp = params.grad;
-    const c = params.grad;
-    const ctx = gradp.getContext("2d");
-    gradient.ranges.forEach((r) => {
-        const g1 = ctx.createLinearGradient(
-            r[1][0] * c.width,
-            0,
-            r[1][1] * c.width,
-            0
+    static random(min, max) {
+        /* eslint-disable-next-line no-extra-parens */
+        return (Math.random() * (max - min)) + min;
+    }
+
+    static randomInt(min, max) {
+        /* eslint-disable-next-line no-extra-parens */
+        return Math.floor(Math.random() * (max - min)) + min;
+    }
+
+    static drawCircle() {
+        const o = params.output;
+        const ctx = o.getContext("2d");
+        /*
+         * If wrapping, offset x and y by 0.5*radius.current
+         * (between min and max)
+         */
+        const radius = MainClass.random(
+            MainClass.minRadius,
+            MainClass.maxRadius
         );
-        const g2 = ctx.createLinearGradient(
-            r[1][1] * c.width,
-            0,
-            r[1][2] * c.width,
-            0
+        let x = MainClass.randomInt(0, o.width);
+        let y = MainClass.randomInt(0, o.width);
+        const opacity = MainClass.random(
+            MainClass.minOpacity,
+            MainClass.maxOpacity
         );
-        g1.addColorStop(0, r[0][0]);
-        g1.addColorStop(1, Gradient.colorMix(r[0][0], r[0][1], 0.5));
-        g2.addColorStop(0, Gradient.colorMix(r[0][0], r[0][1], 0.5));
-        g2.addColorStop(1, r[0][1]);
-        ctx.fillStyle = g1;
-        ctx.fillRect(r[1][0] * c.width, 0, r[1][1] * c.width, c.height);
-        ctx.fillStyle = g2;
-        ctx.fillRect(r[1][1] * c.width, 0, r[1][2] * c.width, c.height);
-    });
+        const color = MainClass.addOpacity(
+            MainClass.gradient.getColor(Math.random()),
+            opacity
+        );
+        ctx.moveTo(x, y);
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.closePath();
+        if (MainClass.wrap) {
+            const ox = x;
+            const oy = y;
+            let inverseCircle = false;
+            if (x <= radius) {
+                inverseCircle = true;
+                x = o.width + x;
+            } else if (x >= o.width - radius) {
+                x -= o.width;
+                inverseCircle = true;
+            }
+            if (inverseCircle) {
+                ctx.moveTo(x, y);
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.closePath();
+            }
+            x = ox;
+            y = oy;
+            inverseCircle = false;
+            if (y <= radius) {
+                inverseCircle = true;
+                y = o.height + y;
+            } else if (y >= o.height - radius) {
+                y -= o.height;
+                inverseCircle = true;
+            }
+            if (inverseCircle) {
+                ctx.moveTo(x, y);
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.closePath();
+            }
+            x = ox;
+            y = oy;
+            inverseCircle = 0;
+            if (x <= radius) {
+                inverseCircle += 1;
+                x = o.width + x;
+            } else if (x >= o.width - radius) {
+                x -= o.width;
+                inverseCircle += 1;
+            }
+            if (y <= radius) {
+                inverseCircle += 1;
+                y = o.height + y;
+            } else if (y >= o.height - radius) {
+                y -= o.height;
+                inverseCircle += 1;
+            }
+            if (inverseCircle > 1) {
+                ctx.moveTo(x, y);
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+    }
+
+    static get args() {
+        const opa = MainClass.minOpacity;
+        const opb = MainClass.maxOpacity;
+        const raa = MainClass.minRadius;
+        const rab = MainClass.maxRadius;
+        return {
+            width: MainClass.width,
+            height: MainClass.height,
+            gradient: MainClass.gradient,
+            wrap: MainClass.wrap,
+            radius: {
+                min: Math.min(raa, rab),
+                max: Math.max(raa, rab)
+            },
+            opacity: {
+                min: Math.min(opa, opb),
+                max: Math.max(opa, opb)
+            }
+        };
+    }
+
+    static init() {
+        MainClass.currentArgs = null;
+        const change = [
+            "width",
+            "height",
+            "opacity-a",
+            "opacity-b",
+            "radius-a",
+            "radius-b",
+            "wrap",
+            "gradient"
+        ];
+        const keyup = [
+            "width",
+            "height",
+            "opacity-a",
+            "opacity-b",
+            "radius-a",
+            "radius-b",
+            "gradient"
+        ];
+        change.forEach((id) => {
+            $(id).addEventListener("change", (e) => MainClass.validate(e));
+        });
+        keyup.forEach((id) => {
+            $(id).addEventListener("keyup", (e) => MainClass.validate(e));
+        });
+        $("start").addEventListener("click", () => MainClass.startDrawing());
+        $("stop").addEventListener("click", () => MainClass.stopDrawing());
+    }
+
+    static validate(e) {
+        //Todo: finish this.
+        if (e.target.id === "gradient") {
+            MainClass.__gradient = null;
+            //Gradient was changed.
+        }
+    }
+
+    static get width() {
+        const e = document.getElementById("width");
+        return parseInt(e.value);
+    }
+
+    static get height() {
+        const e = document.getElementById("height");
+        return parseInt(e.value);
+    }
+
+    static get minOpacity() {
+        const e = document.getElementById("opacity-a");
+        return parseFloat(e.value);
+    }
+
+    static get maxOpacity() {
+        const e = document.getElementById("opacity-b");
+        return parseFloat(e.value);
+    }
+
+    static get minRadius() {
+        const e = document.getElementById("radius-a");
+        return parseFloat(e.value);
+    }
+
+    static get maxRadius() {
+        const e = document.getElementById("radius-b");
+        return parseFloat(e.value);
+    }
+
+    static get gradient() {
+        if (typeof MainClass.__gradient === "undefined"
+            || MainClass.__gradient === null) {
+            const e = document.getElementById("gradient");
+            MainClass.__gradient = new Gradient(e.value);
+        }
+        return MainClass.__gradient;
+    }
+
+    static get wrap() {
+        const e = document.getElementById("wrap");
+        return e.checked;
+    }
+
+    static get output() {
+        return document.getElementById("output");
+    }
     /*
-     * Note:
-     * x11=start*c.width
-     * x12=mid*c.width
-     * x21=mid*c.width
-     * x22-end*c.width
-     * y1=0
-     * y2=0
+     * To actually do the wrapping create a function called by stop that
+     * automatically takes the outer parts that are not able to be drawn to and
+     * copies them over to the other sides
      */
 }
-
-function clearCircles() {
-    const o = params.output;
-    const ctx = o.getContext("2d");
-    ctx.fillStyle = "transparent";
-    ctx.clearRect(0, 0, o.width, o.height);
-    cargs = getArgs();
-    ctx.fillStyle = "white";
-    o.setAttribute("width", cargs.width);
-    o.setAttribute("height", cargs.height);
-    showGradient(cargs.gradient);
-}
-
-function startDrawing() {
-    params.width = false;
-    params.height = false;
-    params["opacity-a"] = false;
-    params["opacity-b"] = false;
-    params["radius-a"] = false;
-    params["radius-b"] = false;
-    params.wrap = false;
-    params.gradient = false;
-    params.start = false;
-    params.stop = true;
-    clearCircles();
-    int = window.setInterval(drawCircles, 1);
-}
-
-function validate(e) {
-    //Todo: finish this.
-}
-
 /*
- * To actually do the wrapping create a function called by stop that
- * automatically takes the outer parts that are not able to be drawn to and
- * copies them over to the other sides
+ * Usage:
+ * width,height,opacity-a,opacity-b,radius-a,radius-b,gradient,start,stop,output
  */
-
-function main() {
-    const change = [
-        "width",
-        "height",
-        "opacity-a",
-        "opacity-b",
-        "radius-a",
-        "radius-b",
-        "wrap",
-        "gradient"
-    ];
-    const keyup = [
-        "width",
-        "height",
-        "opacity-a",
-        "opacity-b",
-        "radius-a",
-        "radius-b",
-        "gradient"
-    ];
-    change.forEach((id) => $(id).addEventListener("change", validate));
-    keyup.forEach((id) => $(id).addEventListener("keyup", validate));
-    $("start").addEventListener("click", startDrawing);
-    $("stop").addEventListener("click", stopDrawing);
-}
 
 if (document.readyState === "complete") {
-    main();
+    MainClass.init();
 } else {
-    window.addEventListener("load", main);
+    window.addEventListener("load", () => MainClass.init());
 }
-/*
- * <html>
- *     <body>
- *         Width: <input id="width"/><br/>
- *         Height: <input id="height"/><br/>
- *         Opacity: <input id="opacity-a"/> - <input id="opacity-b"/><br/>
- *         Radius: <input id="radius-a"/> - <input id="radius-b"/><br/>
- *         Wrap Edges: <input id="wrap"/><br/>
- *         Gradient:<br/>
- *         <textarea id="gradient"></textarea><br/>
- *         <input id="start"/>&nbsp;&bullet;&nbsp;
- *         <input disabled="disabled" id="stop"/><br/>
- *         <hr size="+2" color="black"/>
- *         <canvas id="output">
- *             Dude, get a better browser, yours sucks.
- *         </canvas><br/>
- *         <br/>
- *         <canvas id="grad" width="500" height="250">
- *             Seriously dude, your browser sucks
- *         </canvas>
- *     </body>
- * </html>
- */
