@@ -7,7 +7,9 @@
         "sourceType": "script"
     },
     "globals": {
-        "Promise": "readonly"
+        "Promise": "readonly",
+        "Proxy": "readonly",
+        "Uint32Array":  "readonly"
     },
     "rules": {
         "eqeqeq": 2,

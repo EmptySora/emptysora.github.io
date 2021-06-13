@@ -15,8 +15,12 @@
         <textarea onkeyup="validate(this)" onchange="validate(this)" id="gradient" placeholder="color1,color2...colorN|stop1,stop2...stopN" title="left to right, colors as 6-hex without #, stops from left to right, including a middle segment to denote ratio between two stops eg: stop1,mid1,stop2,mid2,stop3; stops between 1.0 and 0.0"></textarea><br/>
         <input type="button" value="Start Drawing!" onclick="start()" id="start"/>&nbsp;&bullet;&nbsp;<input type="button" value="Stop Drawing!" onclick="stop()" disabled="disabled" id="stop"/><br/>
         <hr size="+2" color="black"/>
-        <canvas id="output" style="border:1px solid black;" >Dude, get a better browser, yours sucks.</canvas><br/>
+        <canvas id="output">
+            Dude, get a better browser, yours sucks.
+        </canvas><br/>
         <br/>
-        <canvas id="grad" style="border:1px solid black;" width="500" height="250">Seriously dude, your browser sucks</canvas>
+        <canvas id="grad" width="500" height="250">
+            Seriously dude, your browser sucks
+        </canvas>
     </body>
 </html>

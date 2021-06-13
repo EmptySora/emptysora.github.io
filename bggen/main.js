@@ -1,61 +1,36 @@
-function a(b) { return document.querySelector("#" + b); }
-var params = new Proxy({}, {
-    get: function (t, p, r) {
-        return a(p).value || a(p).checked || a(p);
+"use strict";
+
+function $(x) {
+    return document.querySelector(`#${x}`);
+}
+let int = null;
+let cargs = null;
+/*
+ * Usage:
+ * get=get value
+ * set=set value
+ * set true=enable
+ * set false=disable
+ * width,height,opacity-a,opacity-b,radius-a,radius-b,gradient,start,stop,output
+ */
+const params = new Proxy({}, {
+    get: (t, p) => {
+        const x = document.querySelector(`#${p}`);
+        return x.value || x.checked || x;
     },
-    set: function (t, p, v, r) {
-        if (v === true)
-            a(p).removeAttribute("disabled");
-        else if (v === false)
-            a(p).setAttribute("disabled", "disabled");
-        else
-            a(p).value = v;
+    set: (t, p, v) => {
+        const x = document.querySelector(`#${p}`);
+        if (v === true) {
+            x.removeAttribute("disabled");
+        } else if (v === false) {
+            x.setAttribute("disabled", "disabled");
+        } else {
+            x.value = v;
+        }
     }
 });
-//get=get value
-//set=set value
-//set true=enable
-//set false=disable
-//width,height,opacity-a,opacity-b,radius-a,radius-b,gradient,start,stop,output
-var int = null;
-function start() {
-    params.width = false;
-    params.height = false;
-    params["opacity-a"] = false;
-    params["opacity-b"] = false;
-    params["radius-a"] = false;
-    params["radius-b"] = false;
-    params["wrap"] = false;
-    params.gradient = false;
-    params.start = false;
-    params.stop = true;
-    clearCircles();
-    int = window.setInterval(drawCircles, 1);
-}
-function getArgs() {
-    var ret = {
-        width: parseInt(params.width),
-        height: parseInt(params.height),
-        gradient: new Gradient(params.gradient),
-        wrap: document.querySelector("#wrap").checked
-    };
-    var opa = params["opacity-a"];
-    var opb = params["opacity-b"];
-    var raa = params["radius-a"];
-    var rab = params["radius-b"];
-    if (opa.length > 0) opb = opb || opa;
-    if (opb.length > 0) opa = opa || opb;
-    if (raa.length > 0) rab = rab || raa;
-    if (rab.length > 0) raa = raa || rab;
-    opa = parseFloat(opa);
-    opb = parseFloat(opb);
-    raa = parseFloat(raa);
-    rab = parseFloat(rab);
-    ret.radius = { min: Math.min(raa, rab), max: Math.max(raa, rab) };
-    ret.opacity = { min: Math.min(opa, opb), max: Math.max(opa, opb) };
-    return ret;
-}
-function stop() {
+
+function stopDrawing() {
     window.clearInterval(int);
     params.width = true;
     params.height = true;
@@ -63,86 +38,169 @@ function stop() {
     params["opacity-b"] = true;
     params["radius-a"] = true;
     params["radius-b"] = true;
-    params["wrap"] = true;
+    params.wrap = true;
     params.gradient = true;
     params.start = true;
     params.stop = false;
 }
-function Gradient(grad) {
-    var ranges = [];
+
+function Gradient(xgrad) {
+    let grad = xgrad;
+    const ranges = [];
     grad = grad.replace(/[\s\r\n\f\t\b]+/g, "");
-    let parts = grad.split('|', 2);
-    let colors = parts[0].split(',');//a,b|b,c|c,d ==interval1
-    let stops = parts[1].split(',');//a,z,b|b,y,c| ==interval2
-    for (let i = 0, j = 0; i < colors.length - 1; i++, j += 2) {
-        let c1 = "#" + colors[i];
-        let c2 = "#" + colors[i + 1];
-        let start = stops[j];
-        let mid = stops[j + 1];
-        let end = stops[j + 2];
+    const parts = grad.split("|", 2);
+    const colors = parts[0].split(","); // > a,b|b,c|c,d ==interval1
+    const stops = parts[1].split(","); // > a,z,b|b,y,c| ==interval2
+    for (let i = 0, j = 0; i < colors.length - 1; i += 1, j += 2) {
+        const c1 = `#${colors[i]}`;
+        const c2 = `#${colors[i + 1]}`;
+        const start = stops[j];
+        const mid = stops[j + 1];
+        const end = stops[j + 2];
         ranges.push([[c1, c2], [start, mid, end]]);
     }
     function inrange(range, point) {
-        var set = range[1];
-        return (point >= set[0]) && (point <= set[2]);
+        return point >= range[1][0]
+            && point <= range[1][2];
     }
     function getrange(point) {
-        for (let i = 0; i < ranges.length; i++) {
-            if (inrange(ranges[i], point))
+        for (let i = 0; i < ranges.length; i += 1) {
+            if (inrange(ranges[i], point)) {
                 return ranges[i];
+            }
         }
         return null;
     }
     function ratio(point, range) {
-        var start = range[1][0];
-        var mid = range[1][1];
-        var end = range[1][2];
-        var sega = inrange([null, [start, null, mid]], point);
-        var segb = inrange([null, [mid, null, end]], point);
-        if (sega && segb)
-            return 0.5;//even
-        if (sega)
-            return ((point - start) / (mid - start)) / 2;
-        if (segb)
-            return (((point - mid) / (end - mid)) / 2) + 0.5;
+        /* eslint-disable-next-line prefer-destructuring */
+        const [start, mid, end] = range[1];
+        const sega = inrange([null, [start, null, mid]], point);
+        const segb = inrange([null, [mid, null, end]], point);
+        if (sega && segb) {
+            return 0.5; //Even
+        } else if (sega) {
+            return (point - start) / (mid - start) / 2;
+        } else if (segb) {
+            /* eslint-disable-next-line no-extra-parens */
+            return ((point - mid) / (end - mid) / 2) + 0.5;
+        }
+        throw new Error("Invalid state!");
+        //Not sure how this got missed, nor am I sure what it should do.
     }
-    function getColor(point) {
-        var range = getrange(point);
-        var rat = ratio(point, range);
-        var color = colorMix(range[0][0], range[0][1], rat);
-        return color;
-    }
+
     function parseColor(a) {
-        var r = parseInt(a.substr(1, 2), 16);
-        var g = parseInt(a.substr(3, 2), 16);
-        var b = parseInt(a.substr(5, 2), 16);
+        const r = parseInt(a.substr(1, 2), 16);
+        const g = parseInt(a.substr(3, 2), 16);
+        const b = parseInt(a.substr(5, 2), 16);
         return [r, g, b];
     }
-    function colorMix(a, b, ratio) {
-        var c1 = parseColor(a);
-        var c2 = parseColor(b);
-        //console.log(a,b,ratio,c1,c2);
-        return "rgb(" + ([(c1[0] * (1 - ratio)) + (c2[0] * ratio),
-        (c1[1] * (1 - ratio)) + (c2[1] * ratio),
-        (c1[2] * (1 - ratio)) + (c2[2] * ratio)]).join(",") + ")";//*(1-ratio),*ratio
+
+    function colorMix(a, b, r) {
+        const c1 = parseColor(a);
+        const c2 = parseColor(b);
+        // > console.log(a,b,ratio,c1,c2);
+        /* eslint-disable-next-line no-extra-parens */
+        const cr = (c1[0] * (1 - r)) + (c2[0] * r);
+        /* eslint-disable-next-line no-extra-parens */
+        const cg = (c1[1] * (1 - r)) + (c2[1] * r);
+        /* eslint-disable-next-line no-extra-parens */
+        const cb = (c1[2] * (1 - r)) + (c2[2] * r);
+
+        return `rgb(${cr},${cg},${cb})`;
+        //*(1-ratio),*ratio
     }
+
+    function getColor(point) {
+        const range = getrange(point);
+        const rat = ratio(point, range);
+        return colorMix(range[0][0], range[0][1], rat);
+    }
+
+
     this.getColor = getColor;
     this.ranges = ranges;
     this.colorMix = colorMix;
 }
-function drawCircles() {
-    for (let i = 0; i < 25; i++)
-        drawCircle();
+
+function getArgs() {
+    const ret = {
+        width: parseInt(params.width),
+        height: parseInt(params.height),
+        gradient: new Gradient(params.gradient),
+        wrap: document.querySelector("#wrap").checked
+    };
+    let opa = params["opacity-a"];
+    let opb = params["opacity-b"];
+    let raa = params["radius-a"];
+    let rab = params["radius-b"];
+    if (opa.length > 0) {
+        opb = opb || opa;
+    }
+    if (opb.length > 0) {
+        opa = opa || opb;
+    }
+    if (raa.length > 0) {
+        rab = rab || raa;
+    }
+    if (rab.length > 0) {
+        raa = raa || rab;
+    }
+    opa = parseFloat(opa);
+    opb = parseFloat(opb);
+    raa = parseFloat(raa);
+    rab = parseFloat(rab);
+    ret.radius = {
+        min: Math.min(raa, rab),
+        max: Math.max(raa, rab)
+    };
+    ret.opacity = {
+        min: Math.min(opa, opb),
+        max: Math.max(opa, opb)
+    };
+    return ret;
 }
+
+function addOpacity(color, opacity) {
+    return color.replace("rgb(", "rgba(").replace(")", `,${opacity})`);
+}
+
+function randint(xmin, xmax) {
+    let min = xmin;
+    let max = xmax;
+    if (typeof min === "undefined") {
+        min = 0;
+    }
+    if (typeof max === "undefined") {
+        max = 0xFFFFFFFF;
+    }
+    min = Math.floor(min);
+    max = Math.floor(max);
+    let rand = new Uint32Array(1);
+    window.crypto.getRandomValues(rand);
+    [rand] = rand;
+    rand %= max - min;
+    return rand + min;
+}
+
+function randfloat() {
+    const rand = new Uint32Array(1);
+    window.crypto.getRandomValues(rand);
+    return rand[0] / 0xFFFFFFFF;
+}
+
 function drawCircle() {
-    var o = params.output;
-    var ctx = o.getContext("2d");
-    //if wrapping, offset x and y by 0.5*radius.current (between min and max)
-    var radius = randfloat() * (cargs.radius.max - cargs.radius.min) + cargs.radius.min;
-    var x = randint(0, o.width);
-    var y = randint(0, o.width);
-    var opacity = randfloat() * (cargs.opacity.max - cargs.opacity.min) + cargs.opacity.min;
-    var color = addOpacity(cargs.gradient.getColor(randfloat()), opacity);
+    const o = params.output;
+    const ctx = o.getContext("2d");
+    //If wrapping, offset x and y by 0.5*radius.current (between min and max)
+    /* eslint-disable-next-line no-extra-parens */
+    const radius = (randfloat() * (cargs.radius.max - cargs.radius.min))
+        + cargs.radius.min;
+    let x = randint(0, o.width);
+    let y = randint(0, o.width);
+    /* eslint-disable-next-line no-extra-parens */
+    const opacity = (randfloat() * (cargs.opacity.max - cargs.opacity.min))
+        + cargs.opacity.min;
+    const color = addOpacity(cargs.gradient.getColor(randfloat()), opacity);
     ctx.moveTo(x, y);
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, 2 * Math.PI, false);
@@ -150,15 +208,14 @@ function drawCircle() {
     ctx.fill();
     ctx.closePath();
     if (cargs.wrap) {
-        var ox = x;
-        var oy = y;
-        var inverseCircle = false;
+        const ox = x;
+        const oy = y;
+        let inverseCircle = false;
         if (x <= radius) {
             inverseCircle = true;
             x = o.width + x;
-        }
-        else if (x >= (o.width - radius)) {
-            x = x - o.width;
+        } else if (x >= o.width - radius) {
+            x -= o.width;
             inverseCircle = true;
         }
         if (inverseCircle) {
@@ -175,9 +232,8 @@ function drawCircle() {
         if (y <= radius) {
             inverseCircle = true;
             y = o.height + y;
-        }
-        else if (y >= (o.height - radius)) {
-            y = y - o.height;
+        } else if (y >= o.height - radius) {
+            y -= o.height;
             inverseCircle = true;
         }
         if (inverseCircle) {
@@ -192,20 +248,18 @@ function drawCircle() {
         y = oy;
         inverseCircle = 0;
         if (x <= radius) {
-            inverseCircle++;
+            inverseCircle += 1;
             x = o.width + x;
-        }
-        else if (x >= (o.width - radius)) {
-            x = x - o.width;
-            inverseCircle++;
+        } else if (x >= o.width - radius) {
+            x -= o.width;
+            inverseCircle += 1;
         }
         if (y <= radius) {
-            inverseCircle++;
+            inverseCircle += 1;
             y = o.height + y;
-        }
-        else if (y >= (o.height - radius)) {
-            y = y - o.height;
-            inverseCircle++;
+        } else if (y >= o.height - radius) {
+            y -= o.height;
+            inverseCircle += 1;
         }
         if (inverseCircle > 1) {
             ctx.moveTo(x, y);
@@ -217,10 +271,53 @@ function drawCircle() {
         }
     }
 }
-var cargs = null;
+
+function drawCircles() {
+    for (let i = 0; i < 25; i += 1) {
+        drawCircle();
+    }
+}
+
+function showGradient(gradient) {
+    const gradp = params.grad;
+    const c = params.grad;
+    const ctx = gradp.getContext("2d");
+    gradient.ranges.forEach((r) => {
+        const g1 = ctx.createLinearGradient(
+            r[1][0] * c.width,
+            0,
+            r[1][1] * c.width,
+            0
+        );
+        const g2 = ctx.createLinearGradient(
+            r[1][1] * c.width,
+            0,
+            r[1][2] * c.width,
+            0
+        );
+        g1.addColorStop(0, r[0][0]);
+        g1.addColorStop(1, gradient.colorMix(r[0][0], r[0][1], 0.5));
+        g2.addColorStop(0, gradient.colorMix(r[0][0], r[0][1], 0.5));
+        g2.addColorStop(1, r[0][1]);
+        ctx.fillStyle = g1;
+        ctx.fillRect(r[1][0] * c.width, 0, r[1][1] * c.width, c.height);
+        ctx.fillStyle = g2;
+        ctx.fillRect(r[1][1] * c.width, 0, r[1][2] * c.width, c.height);
+    });
+    /*
+     * Note:
+     * x11=start*c.width
+     * x12=mid*c.width
+     * x21=mid*c.width
+     * x22-end*c.width
+     * y1=0
+     * y2=0
+     */
+}
+
 function clearCircles() {
-    var o = params.output;
-    var ctx = o.getContext("2d");
+    const o = params.output;
+    const ctx = o.getContext("2d");
     ctx.fillStyle = "transparent";
     ctx.clearRect(0, 0, o.width, o.height);
     cargs = getArgs();
@@ -229,53 +326,83 @@ function clearCircles() {
     o.setAttribute("height", cargs.height);
     showGradient(cargs.gradient);
 }
-function addOpacity(color, opacity) {
-    return color.replace("rgb(", "rgba(").replace(")", "," + opacity + ")");
-}
-function randint(min, max) {
-    if (typeof min == "undefined")
-        min = 0;
-    if (typeof max == "undefined")
-        max = 0xFFFFFFFF;
-    min = Math.floor(min);
-    max = Math.floor(max);
-    var rand = new Uint32Array(1);
-    window.crypto.getRandomValues(rand);
-    rand = rand[0];
-    rand %= max - min;
-    return rand + min;
-}
-function randfloat() {
-    var rand = new Uint32Array(1);
-    window.crypto.getRandomValues(rand);
-    return rand[0] / 0xFFFFFFFF;
-}
-function validate(source) {
 
+function startDrawing() {
+    params.width = false;
+    params.height = false;
+    params["opacity-a"] = false;
+    params["opacity-b"] = false;
+    params["radius-a"] = false;
+    params["radius-b"] = false;
+    params.wrap = false;
+    params.gradient = false;
+    params.start = false;
+    params.stop = true;
+    clearCircles();
+    int = window.setInterval(drawCircles, 1);
 }
-function showGradient(gradient) {
-    var gradp = params.grad;
-    var c = params.grad;
-    var ranges = gradient.ranges;
-    var ctx = gradp.getContext("2d");
-    //x11=start*c.width
-    //x12=mid*c.width
-    //x21=mid*c.width
-    //x22-end*c.width
-    //y1=0
-    //y2=0
-    for (let i = 0; i < ranges.length; i++) {
-        let range = ranges[i];
-        let g1 = ctx.createLinearGradient(range[1][0] * c.width, 0, range[1][1] * c.width, 0);
-        let g2 = ctx.createLinearGradient(range[1][1] * c.width, 0, range[1][2] * c.width, 0);
-        g1.addColorStop(0, range[0][0]);
-        g1.addColorStop(1, gradient.colorMix(range[0][0], range[0][1], 0.5));
-        g2.addColorStop(0, gradient.colorMix(range[0][0], range[0][1], 0.5));
-        g2.addColorStop(1, range[0][1]);
-        ctx.fillStyle = g1;
-        ctx.fillRect(range[1][0] * c.width, 0, range[1][1] * c.width, c.height);
-        ctx.fillStyle = g2;
-        ctx.fillRect(range[1][1] * c.width, 0, range[1][2] * c.width, c.height);
-    }
+
+function validate(e) {
+    //Todo: finish this.
 }
-            //to actually do the wrapping create a function called by stop that automatically takes the outer parts that are not able to be drawn to and copies them over to the other sides
+
+/*
+ * To actually do the wrapping create a function called by stop that
+ * automatically takes the outer parts that are not able to be drawn to and
+ * copies them over to the other sides
+ */
+
+function main() {
+    const change = [
+        "width",
+        "height",
+        "opacity-a",
+        "opacity-b",
+        "radius-a",
+        "radius-b",
+        "wrap",
+        "gradient"
+    ];
+    const keyup = [
+        "width",
+        "height",
+        "opacity-a",
+        "opacity-b",
+        "radius-a",
+        "radius-b",
+        "gradient"
+    ];
+    change.forEach((id) => $(id).addEventListener("change", validate));
+    keyup.forEach((id) => $(id).addEventListener("keyup", validate));
+    $("start").addEventListener("click", startDrawing);
+    $("stop").addEventListener("click", stopDrawing);
+}
+
+if (document.readyState === "complete") {
+    main();
+} else {
+    window.addEventListener("load", main);
+}
+/*
+ * <html>
+ *     <body>
+ *         Width: <input id="width"/><br/>
+ *         Height: <input id="height"/><br/>
+ *         Opacity: <input id="opacity-a"/> - <input id="opacity-b"/><br/>
+ *         Radius: <input id="radius-a"/> - <input id="radius-b"/><br/>
+ *         Wrap Edges: <input id="wrap"/><br/>
+ *         Gradient:<br/>
+ *         <textarea id="gradient"></textarea><br/>
+ *         <input id="start"/>&nbsp;&bullet;&nbsp;
+ *         <input disabled="disabled" id="stop"/><br/>
+ *         <hr size="+2" color="black"/>
+ *         <canvas id="output">
+ *             Dude, get a better browser, yours sucks.
+ *         </canvas><br/>
+ *         <br/>
+ *         <canvas id="grad" width="500" height="250">
+ *             Seriously dude, your browser sucks
+ *         </canvas>
+ *     </body>
+ * </html>
+ */
