@@ -15,11 +15,11 @@ let cargs = null;
  */
 const params = new Proxy({}, {
     get: (t, p) => {
-        const x = document.querySelector(`#${p}`);
+        const x = document.getElementById(p);
         return x.value || x.checked || x;
     },
     set: (t, p, v) => {
-        const x = document.querySelector(`#${p}`);
+        const x = document.getElementById(p);
         if (v === true) {
             x.removeAttribute("disabled");
         } else if (v === false) {
@@ -27,6 +27,11 @@ const params = new Proxy({}, {
         } else {
             x.value = v;
         }
+        return true;
+        /*
+         * When the heck did they change it so you had to return
+         * whether or not the assignment succeeded...?
+         */
     }
 });
 
@@ -44,60 +49,73 @@ function stopDrawing() {
     params.stop = false;
 }
 
-function Gradient(xgrad) {
-    let grad = xgrad;
-    const ranges = [];
-    grad = grad.replace(/[\s\r\n\f\t\b]+/g, "");
-    const parts = grad.split("|", 2);
-    const colors = parts[0].split(","); // > a,b|b,c|c,d ==interval1
-    const stops = parts[1].split(","); // > a,z,b|b,y,c| ==interval2
-    for (let i = 0, j = 0; i < colors.length - 1; i += 1, j += 2) {
-        const c1 = `#${colors[i]}`;
-        const c2 = `#${colors[i + 1]}`;
-        const start = stops[j];
-        const mid = stops[j + 1];
-        const end = stops[j + 2];
-        ranges.push([[c1, c2], [start, mid, end]]);
+class Gradient {
+    constructor(xgrad) {
+        let grad = xgrad;
+        const ranges = [];
+        grad = grad.replace(/[\s\r\n\f\t\b]+/g, "");
+        const parts = grad.split("|", 2);
+        const colors = parts[0].split(","); // > a,b|b,c|c,d ==interval1
+        const stops = parts[1].split(","); // > a,z,b|b,y,c| ==interval2
+        for (let i = 0, j = 0; i < colors.length - 1; i += 1, j += 2) {
+            const c1 = `#${colors[i]}`;
+            const c2 = `#${colors[i + 1]}`;
+            const start = stops[j];
+            const mid = stops[j + 1];
+            const end = stops[j + 2];
+            ranges.push([[c1, c2], [start, mid, end]]);
+        }
+        this.ranges = ranges;
     }
-    function inrange(range, point) {
-        return point >= range[1][0]
-            && point <= range[1][2];
-    }
-    function getrange(point) {
-        for (let i = 0; i < ranges.length; i += 1) {
-            if (inrange(ranges[i], point)) {
-                return ranges[i];
+
+    getRange(pt) {
+        for (let i = 0; i < this.ranges.length; i += 1) {
+            const r = this.ranges[i];
+            if (Gradient.inRange(r, pt)) {
+                return r;
             }
         }
         return null;
     }
-    function ratio(point, range) {
+
+    getColor(pt) {
+        const r = this.getRange(pt);
+        const rat = Gradient.ratio(pt, r);
+        return Gradient.colorMix(r[0][0], r[0][1], rat);
+    }
+
+    static inRange(r, pt) {
+        return pt >= r[1][0]
+            && pt <= r[1][2];
+    }
+
+    static ratio(pt, r) {
         /* eslint-disable-next-line prefer-destructuring */
-        const [start, mid, end] = range[1];
-        const sega = inrange([null, [start, null, mid]], point);
-        const segb = inrange([null, [mid, null, end]], point);
+        const [start, mid, end] = r[1];
+        const sega = Gradient.inRange([null, [start, null, mid]], pt);
+        const segb = Gradient.inRange([null, [mid, null, end]], pt);
         if (sega && segb) {
             return 0.5; //Even
         } else if (sega) {
-            return (point - start) / (mid - start) / 2;
+            return (pt - start) / (mid - start) / 2;
         } else if (segb) {
             /* eslint-disable-next-line no-extra-parens */
-            return ((point - mid) / (end - mid) / 2) + 0.5;
+            return ((pt - mid) / (end - mid) / 2) + 0.5;
         }
         throw new Error("Invalid state!");
         //Not sure how this got missed, nor am I sure what it should do.
     }
 
-    function parseColor(a) {
+    static parseColor(a) {
         const r = parseInt(a.substr(1, 2), 16);
         const g = parseInt(a.substr(3, 2), 16);
         const b = parseInt(a.substr(5, 2), 16);
         return [r, g, b];
     }
 
-    function colorMix(a, b, r) {
-        const c1 = parseColor(a);
-        const c2 = parseColor(b);
+    static colorMix(a, b, r) {
+        const c1 = Gradient.parseColor(a);
+        const c2 = Gradient.parseColor(b);
         // > console.log(a,b,ratio,c1,c2);
         /* eslint-disable-next-line no-extra-parens */
         const cr = (c1[0] * (1 - r)) + (c2[0] * r);
@@ -109,17 +127,6 @@ function Gradient(xgrad) {
         return `rgb(${cr},${cg},${cb})`;
         //*(1-ratio),*ratio
     }
-
-    function getColor(point) {
-        const range = getrange(point);
-        const rat = ratio(point, range);
-        return colorMix(range[0][0], range[0][1], rat);
-    }
-
-
-    this.getColor = getColor;
-    this.ranges = ranges;
-    this.colorMix = colorMix;
 }
 
 function getArgs() {
@@ -296,8 +303,8 @@ function showGradient(gradient) {
             0
         );
         g1.addColorStop(0, r[0][0]);
-        g1.addColorStop(1, gradient.colorMix(r[0][0], r[0][1], 0.5));
-        g2.addColorStop(0, gradient.colorMix(r[0][0], r[0][1], 0.5));
+        g1.addColorStop(1, Gradient.colorMix(r[0][0], r[0][1], 0.5));
+        g2.addColorStop(0, Gradient.colorMix(r[0][0], r[0][1], 0.5));
         g2.addColorStop(1, r[0][1]);
         ctx.fillStyle = g1;
         ctx.fillRect(r[1][0] * c.width, 0, r[1][1] * c.width, c.height);

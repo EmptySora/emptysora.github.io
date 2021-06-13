@@ -6,14 +6,15 @@
         <meta charset="utf-8"/>
     </head>
     <body>
-        Width: <input type="text" id="width" onkeyup="validate(this)" onchange="validate(this)"/><br/>
-        Height: <input type="text" id="height" onkeyup="validate(this)" onchange="validate(this)"/><br/>
-        Opacity: <input type="text" id="opacity-a" onkeyup="validate(this)" onchange="validate(this)"/> - <input type="text" id="opacity-b" onkeyup="validate(this)" onchange="validate(this)"/><br/>
-        Radius: <input type="text" id="radius-a" onkeyup="validate(this)" onchange="validate(this)"/> - <input type="text" id="radius-b" onkeyup="validate(this)" onchange="validate(this)"/><br/>
-        Wrap Edges: <input type="checkbox" id="wrap" onchange="validate(this)"/><br/>
+        Width: <input type="text" id="width"/><br/>
+        Height: <input type="text" id="height"/><br/>
+        Opacity: <input type="text" id="opacity-a"/> - <input type="text" id="opacity-b"/><br/>
+        Radius: <input type="text" id="radius-a"/> - <input type="text" id="radius-b"/><br/>
+        Wrap Edges: <input type="checkbox" id="wrap"/><br/>
         Gradient:<br/>
-        <textarea onkeyup="validate(this)" onchange="validate(this)" id="gradient" placeholder="color1,color2...colorN|stop1,stop2...stopN" title="left to right, colors as 6-hex without #, stops from left to right, including a middle segment to denote ratio between two stops eg: stop1,mid1,stop2,mid2,stop3; stops between 1.0 and 0.0"></textarea><br/>
-        <input type="button" value="Start Drawing!" onclick="start()" id="start"/>&nbsp;&bullet;&nbsp;<input type="button" value="Stop Drawing!" onclick="stop()" disabled="disabled" id="stop"/><br/>
+        <textarea id="gradient" placeholder="color1,color2...colorN|stop1,stop2...stopN" title="left to right, colors as 6-hex without #, stops from left to right, including a middle segment to denote ratio between two stops eg: stop1,mid1,stop2,mid2,stop3; stops between 1.0 and 0.0"></textarea><br/>
+        <input type="button" value="Start Drawing!" id="start"/>&nbsp;&bullet;&nbsp;
+        <input type="button" value="Stop Drawing!" disabled="disabled" id="stop"/><br/>
         <hr size="+2" color="black"/>
         <canvas id="output">
             Dude, get a better browser, yours sucks.
