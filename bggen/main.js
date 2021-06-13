@@ -1,39 +1,6 @@
 "use strict";
 /* eslint-disable no-underscore-dangle */
 
-function $(x) {
-    return document.getElementById(x);
-}
-/*
- * Usage:
- * get=get value
- * set=set value
- * set true=enable
- * set false=disable
- * width,height,opacity-a,opacity-b,radius-a,radius-b,gradient,start,stop,output
- */
-const params = new Proxy({}, {
-    get: (t, p) => {
-        const x = document.getElementById(p);
-        return x.value || x.checked || x;
-    },
-    set: (t, p, v) => {
-        const x = document.getElementById(p);
-        if (v === true) {
-            x.removeAttribute("disabled");
-        } else if (v === false) {
-            x.setAttribute("disabled", "disabled");
-        } else {
-            x.value = v;
-        }
-        return true;
-        /*
-         * When the heck did they change it so you had to return
-         * whether or not the assignment succeeded...?
-         */
-    }
-});
-
 class Gradient {
     constructor(xgrad) {
         let grad = xgrad;
@@ -115,17 +82,21 @@ class Gradient {
 }
 
 class MainClass {
+    static updateInterface(state) {
+        document.getElementById("width").disabled = !state;
+        document.getElementById("height").disabled = !state;
+        document.getElementById("opacity-a").disabled = !state;
+        document.getElementById("opacity-b").disabled = !state;
+        document.getElementById("radius-a").disabled = !state;
+        document.getElementById("radius-b").disabled = !state;
+        document.getElementById("wrap").disabled = !state;
+        document.getElementById("gradient").disabled = !state;
+        document.getElementById("start").disabled = !state;
+        document.getElementById("stop").disabled = state;
+    }
+
     static startDrawing() {
-        params.width = false;
-        params.height = false;
-        params["opacity-a"] = false;
-        params["opacity-b"] = false;
-        params["radius-a"] = false;
-        params["radius-b"] = false;
-        params.wrap = false;
-        params.gradient = false;
-        params.start = false;
-        params.stop = true;
+        MainClass.updateInterface(false);
         MainClass.clearCircles();
         MainClass.interval = window.setInterval(() => {
             MainClass.drawCircles();
@@ -134,16 +105,7 @@ class MainClass {
 
     static stopDrawing() {
         window.clearInterval(MainClass.interval);
-        params.width = true;
-        params.height = true;
-        params["opacity-a"] = true;
-        params["opacity-b"] = true;
-        params["radius-a"] = true;
-        params["radius-b"] = true;
-        params.wrap = true;
-        params.gradient = true;
-        params.start = true;
-        params.stop = false;
+        MainClass.updateInterface(true);
     }
 
     static clearCircles() {
@@ -151,7 +113,6 @@ class MainClass {
         const ctx = o.getContext("2d");
         ctx.fillStyle = "transparent";
         ctx.clearRect(0, 0, o.width, o.height);
-        MainClass.currentArgs = MainClass.args;
         ctx.fillStyle = "white";
         o.setAttribute("width", MainClass.width);
         o.setAttribute("height", MainClass.height);
@@ -159,9 +120,8 @@ class MainClass {
     }
 
     static showGradient(gradient) {
-        const gradp = params.grad;
-        const c = params.grad;
-        const ctx = gradp.getContext("2d");
+        const c = document.getElementById("grad");
+        const ctx = c.getContext("2d");
         gradient.ranges.forEach((r) => {
             const g1 = ctx.createLinearGradient(
                 r[1][0] * c.width,
@@ -216,7 +176,7 @@ class MainClass {
     }
 
     static drawCircle() {
-        const o = params.output;
+        const o = MainClass.output;
         const ctx = o.getContext("2d");
         /*
          * If wrapping, offset x and y by 0.5*radius.current
@@ -307,29 +267,11 @@ class MainClass {
         }
     }
 
-    static get args() {
-        const opa = MainClass.minOpacity;
-        const opb = MainClass.maxOpacity;
-        const raa = MainClass.minRadius;
-        const rab = MainClass.maxRadius;
-        return {
-            width: MainClass.width,
-            height: MainClass.height,
-            gradient: MainClass.gradient,
-            wrap: MainClass.wrap,
-            radius: {
-                min: Math.min(raa, rab),
-                max: Math.max(raa, rab)
-            },
-            opacity: {
-                min: Math.min(opa, opb),
-                max: Math.max(opa, opb)
-            }
-        };
-    }
-
     static init() {
-        MainClass.currentArgs = null;
+        function $(x) {
+            return document.getElementById(x);
+        }
+
         const change = [
             "width",
             "height",
@@ -414,16 +356,13 @@ class MainClass {
     static get output() {
         return document.getElementById("output");
     }
+
     /*
      * To actually do the wrapping create a function called by stop that
      * automatically takes the outer parts that are not able to be drawn to and
      * copies them over to the other sides
      */
 }
-/*
- * Usage:
- * width,height,opacity-a,opacity-b,radius-a,radius-b,gradient,start,stop,output
- */
 
 if (document.readyState === "complete") {
     MainClass.init();
