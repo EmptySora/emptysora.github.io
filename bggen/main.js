@@ -1,12 +1,25 @@
 "use strict";
 /* eslint-disable no-underscore-dangle */
 
+/**
+ * An object that represents the ranges of a particular gradient
+ * @typedef {Object} Range
+ * @property {String[]} "1"
+ */
+
+/**
+ * A helper class that helps parse the gradients and makes it easier to use
+ * them.
+ */
 class Gradient {
+    /**
+     * Creates a new {@link Gradient} from the specified gradient string.
+     * @param {string} xgrad
+     *   The string containing the gradient to parse.
+     */
     constructor(xgrad) {
-        let grad = xgrad;
         const ranges = [];
-        grad = grad.replace(/[\s\r\n\f\t\b]+/g, "");
-        const parts = grad.split("|", 2);
+        const parts = xgrad.replace(/[\s\r\n\f\t\b]+/g, "").split("|", 2);
         const colors = parts[0].split(","); // > a,b|b,c|c,d ==interval1
         const stops = parts[1].split(","); // > a,z,b|b,y,c| ==interval2
         for (let i = 0, j = 0; i < colors.length - 1; i += 1, j += 2) {
@@ -15,15 +28,16 @@ class Gradient {
             const start = stops[j];
             const mid = stops[j + 1];
             const end = stops[j + 2];
-            ranges.push([[c1, c2], [start, mid, end]]);
+            ranges.push(new GradientRange([c1, c2], [start, mid, end]));
         }
+
         this.ranges = ranges;
     }
 
     getRange(pt) {
         for (let i = 0; i < this.ranges.length; i += 1) {
             const r = this.ranges[i];
-            if (Gradient.inRange(r, pt)) {
+            if (r.inRange(pt)) {
                 return r;
             }
         }
@@ -31,43 +45,74 @@ class Gradient {
     }
 
     getColor(pt) {
-        const r = this.getRange(pt);
-        const rat = Gradient.ratio(pt, r);
-        return Gradient.colorMix(r[0][0], r[0][1], rat);
+        return this.getRange(pt).getColor(pt);
+    }
+}
+
+class GradientRange {
+    constructor(colors, points) {
+        this.colors = colors;
+        this.points = points;
     }
 
-    static inRange(r, pt) {
-        return pt >= r[1][0]
-            && pt <= r[1][2];
+    get leftColor() {
+        return this.colors[0];
     }
 
-    static ratio(pt, r) {
+    get rightColor() {
+        return this.colors[1];
+    }
+
+    get startPoint() {
+        return this.points[0];
+    }
+
+    get midPoint() {
+        return this.points[1];
+    }
+
+    get endPoint() {
+        return this.points[2];
+    }
+
+
+    getColor(pt) {
+        return this.mix(this.ratio(pt));
+    }
+
+    inRange(pt) {
+        return pt >= this.startPoint && pt <= this.endPoint;
+    }
+
+    inStartHalf(pt) {
+        return pt >= this.startPoint && pt <= this.midPoint;
+    }
+
+    inEndHalf(pt) {
+        return pt >= this.midPoint && pt <= this.endPoint;
+    }
+
+    ratio(pt) {
         /* eslint-disable-next-line prefer-destructuring */
-        const [start, mid, end] = r[1];
-        const sega = Gradient.inRange([null, [start, null, mid]], pt);
-        const segb = Gradient.inRange([null, [mid, null, end]], pt);
+        const sega = this.inStartHalf(pt);
+        const segb = this.inEndHalf(pt);
         if (sega && segb) {
             return 0.5; //Even
         } else if (sega) {
-            return (pt - start) / (mid - start) / 2;
+            return (pt - this.startPoint) / (this.midPoint - this.startPoint)
+                / 2;
         } else if (segb) {
             /* eslint-disable-next-line no-extra-parens */
-            return ((pt - mid) / (end - mid) / 2) + 0.5;
+            return ((pt - this.midPoint) / (this.endPoint - this.midPoint) / 2)
+                + 0.5;
         }
         throw new Error("Invalid state!");
         //Not sure how this got missed, nor am I sure what it should do.
     }
 
-    static parseColor(a) {
-        const r = parseInt(a.substr(1, 2), 16);
-        const g = parseInt(a.substr(3, 2), 16);
-        const b = parseInt(a.substr(5, 2), 16);
-        return [r, g, b];
-    }
-
-    static colorMix(a, b, r) {
-        const c1 = Gradient.parseColor(a);
-        const c2 = Gradient.parseColor(b);
+    mix(r) {
+        const c1 = GradientRange.parseColor(this.leftColor);
+        const c2 = GradientRange.parseColor(this.rightColor);
         // > console.log(a,b,ratio,c1,c2);
         /* eslint-disable-next-line no-extra-parens */
         const cr = (c1[0] * (1 - r)) + (c2[0] * r);
@@ -78,6 +123,13 @@ class Gradient {
 
         return `rgb(${cr},${cg},${cb})`;
         //*(1-ratio),*ratio
+    }
+
+    static parseColor(a) {
+        const r = parseInt(a.substr(1, 2), 16);
+        const g = parseInt(a.substr(3, 2), 16);
+        const b = parseInt(a.substr(5, 2), 16);
+        return [r, g, b];
     }
 }
 
@@ -116,33 +168,43 @@ class MainClass {
         ctx.fillStyle = "white";
         o.setAttribute("width", MainClass.width);
         o.setAttribute("height", MainClass.height);
-        MainClass.showGradient(MainClass.gradient);
+        MainClass.showGradient();
     }
 
-    static showGradient(gradient) {
+    static showGradient() {
         const c = document.getElementById("grad");
         const ctx = c.getContext("2d");
-        gradient.ranges.forEach((r) => {
+        MainClass.gradient.ranges.forEach((r) => {
             const g1 = ctx.createLinearGradient(
-                r[1][0] * c.width,
+                r.startPoint * c.width,
                 0,
-                r[1][1] * c.width,
+                r.midPoint * c.width,
                 0
             );
             const g2 = ctx.createLinearGradient(
-                r[1][1] * c.width,
+                r.midPoint * c.width,
                 0,
-                r[1][2] * c.width,
+                r.endPoint * c.width,
                 0
             );
-            g1.addColorStop(0, r[0][0]);
-            g1.addColorStop(1, Gradient.colorMix(r[0][0], r[0][1], 0.5));
-            g2.addColorStop(0, Gradient.colorMix(r[0][0], r[0][1], 0.5));
-            g2.addColorStop(1, r[0][1]);
+            g1.addColorStop(0, r.leftColor);
+            g1.addColorStop(1, r.mix(0.5));
+            g2.addColorStop(0, r.mix(0.5));
+            g2.addColorStop(1, r.rightColor);
             ctx.fillStyle = g1;
-            ctx.fillRect(r[1][0] * c.width, 0, r[1][1] * c.width, c.height);
+            ctx.fillRect(
+                r.startPoint * c.width,
+                0,
+                r.midPoint * c.width,
+                c.height
+            );
             ctx.fillStyle = g2;
-            ctx.fillRect(r[1][1] * c.width, 0, r[1][2] * c.width, c.height);
+            ctx.fillRect(
+                r.midPoint * c.width,
+                0,
+                r.endPoint * c.width,
+                c.height
+            );
         });
         /*
          * Note:
