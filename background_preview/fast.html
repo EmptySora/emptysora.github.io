@@ -1,0 +1,64 @@
+﻿<html>
+    <head>
+        <title>Stream Background Animation Simulator</title>
+        <link rel="stylesheet" type="text/css" href="fast.css"/>
+        <script src="fast.js"></script>
+        <meta charset="utf-8"/>
+        <!-- Try to preload the images. Reduces flickering (or that's the intent, at least.) -->
+        <link rel="prefetch" href="images/background.png"/>
+        <link rel="prefetch" href="images/background-dark.png"/>
+        <link rel="prefetch" href="images/blue_fire.png"/>
+        <link rel="prefetch" href="images/deepsea.png"/>
+        <link rel="prefetch" href="images/emerald.png"/>
+        <link rel="prefetch" href="images/fire.png"/>
+        <link rel="prefetch" href="images/garnet.png"/>
+        <link rel="prefetch" href="images/greenfire.png"/>
+        <link rel="prefetch" href="images/pink.png"/>
+        <link rel="prefetch" href="images/ruby.png"/>
+        <link rel="prefetch" href="images/sapphire.png"/>
+    </head>
+    <body>
+        <div id="bottom" class="image-container">
+            <div class="image image-new bottom"></div>
+            <div class="old-container">
+                <div class="image image-old bottom"></div>
+            </div>
+        </div>
+        <div id="top" class="image-container">
+            <div class="image image-new top"></div>
+            <div class="old-container">
+                <div class="image image-old top"></div>
+            </div>
+        </div>
+        <div class="no-image disclaimer">
+            <div class="disclaimer-text no-image">
+                Loose approximation of my stream background.<br/>
+                Each image cyles every <code>5</code> minutes, and transitions take <code>10</code> seconds.<br/>
+                <br/>
+                Due to the fact that the <code>background-image</code> CSS property is not animatable, perfectly approximating the animation
+                will fail for the following reasons:<br />
+                1. The transition overrides the animation itself (forcing us to put the old images in a container element so the animation
+                can be applied to <b>that</b> and not override the scrolling effect.)<br />
+                2. Since this animation is achieved by having two images on top of each other, the latter image with an <code>opacity</code>
+                of <code>0.5</code>, it means that getting a perfectly transitioning element is impossible. Since there are, in effect, four
+                images on the page (two for the bottom layer, two for the top layer; two for the old image, two for the new image), and the
+                fact that the images are transitioned with the <code>opacity</code> CSS property, it means that the top layer's true opacity
+                is the product of the opacities of the images making it up. IE: if you had a black background, and covered it twice with half
+                opacity white rectangles spanning the entire thing, <i>the resulting image would be <code>50%</code>black, and <code>75%</code>
+                white.</i> Thus, for animating the transition, when both images in the top layer are visible at at most <code>50%</code>
+                opacity, it means that the top layer's true opacity is <code>75%</code> (instead of the expected <code>50%</code>).<br/>
+                <br/>
+                The only way to fix this would be to physically blend the two images together using the opacity as a base, and setting
+                <i>that</i> image with an opacity of <code>50%</code>. For performance reasons, I'm not even going to attempt to do that.
+                However, through the Canvas API, it's likely possible to individually merge each pixel in both images, draw that to a canvas
+                that then has <code>50%</code> opacity.<br/>
+                <br/>
+                The whole point with using overlaid images and CSS is so that we <b>don't</b> have to resort to manually blending the images
+                (which will near-assuredly perform much worse than native CSS). IE: life sucks and it isn't fair.<br/>
+            </div>
+            <div class="no-image close">
+                <input type="button" value="close" id="close-button"/>
+            </div>
+        </div>
+    </body>
+</html>

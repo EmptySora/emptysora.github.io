@@ -1,0 +1,5 @@
+cloudy haze    WRAP    1600x900    0.1-0.1    50-50    000000,FFFFFF|0,0.5,1
+steel dawn     WRAP    1600x900    0.1-0.1    50-50    C0C0C0,FFFFFF|0,0.5,1
+steel dusk     WRAP    1600x900    0.1-0.1    50-50    000000,444444|0,0.5,1
+
+file:///C:/Users/Brandon/Documents/GitHub/emptysora.github.io/bggen/index.html

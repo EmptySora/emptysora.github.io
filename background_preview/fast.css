@@ -1,0 +1,154 @@
+div:not(.no-image) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-repeat: repeat;
+}
+
+.image {
+    background-size: 1600px 900px;
+    background-attachment: fixed;
+}
+
+.transition #bottom .old-container {
+    animation: 5s linear 1 both transition-hide-bottom;
+    opacity: 1;
+}
+
+.transition #top .old-container {
+    animation: 5s linear 1 both transition-hide-top;
+    opacity: 1;
+}
+
+.image-new {
+    background-image: url("images/background.png");
+}
+
+.old-container  {
+    opacity: 0;
+}
+
+.top.image {
+    opacity: 0.5;
+    animation:
+        200s linear infinite both main-animation-top-x, /* -8.00 x 1600 */ 
+        150s linear infinite both main-animation-top-y; /* 6.00 x 900 */
+}
+
+.bottom.image {
+    animation: 
+        200s linear infinite both main-animation-bottom-x, /* 8.00 x 1600 */
+        150s linear infinite both main-animation-bottom-y; /* 6.00 x 900 */
+}
+
+div.disclaimer-text {
+    max-width: 250px;
+    max-height: 100px;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 5px;
+    color: white;
+    background-color: rgba(0, 0, 0, 0.5);
+    text-shadow: 1px 1px 0px black, -1px 1px 0px black,
+        1px -1px 0px black, -1px -1px 0px black,
+        1px 0px 0px black, 0px 1px 0px black,
+        -1px 0px 0px black, 0px -1px 0px black;
+}
+
+div.disclaimer {
+    font-size: 9pt;
+    font-family: sans-serif;
+    position: fixed;
+    top: 0;
+    right: 0;
+    padding: 5px;
+}
+
+div.close {
+    text-align: right;
+    width: 250px;
+    margin-top: 0;
+    margin-bottom: 0;
+    margin-left: 11px;
+    margin-right: -15px;
+}
+
+@keyframes main-animation-top-x {
+    from {
+        background-position-x: 0;
+    }
+
+    to {
+        background-position-x: 1600px;
+    }
+}
+
+@keyframes main-animation-top-y {
+    from {
+        background-position-y: 0;
+    }
+
+    to {
+        background-position-y: -900px;
+    }
+}
+
+@keyframes main-animation-bottom-x {
+    from {
+        background-position-x: 0;
+    }
+
+    to {
+        background-position-x: -1600px;
+    }
+}
+
+@keyframes main-animation-bottom-y {
+    from {
+        background-position-y: 0;
+    }
+
+    to {
+        background-position-y: -900px;
+    }
+}
+
+
+@keyframes transition-hide-bottom {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes transition-hide-top {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+/*
+ * For some reason, I had to search as to whether or not background-image was
+ * animatable... 
+ * I literally had to use javascript in my social-revolver app because I couldn't
+ * animate the images fading through css alone...
+ * The hack is to:
+ *  1. Use two sets of images overlaid on top of each other
+ *  2. Normally, only one of them will be visible at any given time
+ *  3. During a transition:
+ *     a. make sure the new image is z-indexed below the old image
+ *     b. make sure both images are visible
+ *     c. add a class to both images with attached animations to animate the
+ *        "opacity" property (one from 1 to 0, the other from 0 to 1)
+ *     d. once done, set the top image to the new image and make it visible
+ *     e. make the bottom image invisible.
+ */
